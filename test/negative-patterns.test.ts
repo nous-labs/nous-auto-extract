@@ -100,4 +100,74 @@ describe("negative-patterns", () => {
       })
     })
   })
+
+  describe("#given system injection patterns", () => {
+    describe("#when text contains bootstrap injection", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("[SESSION BOOTSTRAP - Nous Persistent Memory] Version: nous-omc...", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("## Memory Database\n## Constraints\n- [2] NEVER post on GitHub", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("## Constraints\n- never do this\n- always do that", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text contains system reminder", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern('<system-reminder> [BACKGROUND TASK COMPLETED] **ID:** `bg_abc`</system-reminder>', "user").rejected).toBe(true)
+        expect(matchesNegativePattern('<system-reminder>\nSome notification\n</system-reminder>', "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text contains delegation prompt markers", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern('1. TASK: Check upstream repos\n2. EXPECTED OUTCOME: Summary <!-- OMO_INTERNAL_INITIATOR -->', "user").rejected).toBe(true)
+        expect(matchesNegativePattern('MUST NOT DO:\n- Do NOT post comments', "user").rejected).toBe(true)
+        expect(matchesNegativePattern('REQUIRED TOOLS: Bash (for gh commands)', "user").rejected).toBe(true)
+        expect(matchesNegativePattern('brain/omo-memory capture --type decision', "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text contains agent usage reminder", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern('[Agent Usage Reminder]\nYou called a search tool...', "user").rejected).toBe(true)
+        expect(matchesNegativePattern('Instructions from: /workspace/nous-omc/AGENTS.md', "user").rejected).toBe(true)
+      })
+    })
+  })
+
+  describe("#given message length guard", () => {
+    describe("#when text exceeds 1500 characters", () => {
+      it("#then should reject as too long", () => {
+        const longText = "I prefer ".repeat(200) // 1800 chars
+        const result = matchesNegativePattern(longText, "user")
+        expect(result.rejected).toBe(true)
+        expect(result.pattern).toBe("too_long")
+      })
+    })
+
+    describe("#when text is under 1500 characters", () => {
+      it("#then should NOT reject on length alone", () => {
+        const shortText = "I prefer dark mode over light mode"
+        expect(matchesNegativePattern(shortText, "user").rejected).toBe(false)
+      })
+    })
+  })
+
+  describe("#given contraction question patterns", () => {
+    describe("#when text is a question starting with contraction", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("don't we already have some of this skills?", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("doesn't this already exist?", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("isn't that redundant?", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("won't that break the build?", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("haven't we done this before?", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text is a preference statement with contraction", () => {
+      it("#then should NOT reject (not a question)", () => {
+        expect(matchesNegativePattern("don't use console.log in production", "user").rejected).toBe(false)
+        expect(matchesNegativePattern("doesn't matter which one, I prefer TypeScript", "user").rejected).toBe(false)
+      })
+    })
+  })
 })

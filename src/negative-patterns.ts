@@ -2,9 +2,31 @@
  * Negative pattern detection — Layer 1 of the extraction pipeline.
  *
  * Rejects messages that look like AI meta-talk, first-person recall,
- * remind-me patterns, or assistant-generated list output.
+ * remind-me patterns, assistant-generated list output, or system-injected content.
  * Does NOT reject negation ("never use X") — those are valid constraints.
  */
+
+/** Maximum message length for extraction — anything longer is likely a dump, not human conversation. */
+const MAX_EXTRACTABLE_LENGTH = 1500
+
+/** Patterns that indicate system-injected content (bootstrap, notifications, delegation). */
+const SYSTEM_INJECTION_PATTERNS: RegExp[] = [
+  /\[SESSION BOOTSTRAP/i,
+  /## Memory Database/,
+  /## Constraints\b/,
+  /<system-reminder>/i,
+  /<\/system-reminder>/i,
+  /<!-- OMO_INTERNAL_INITIATOR -->/,
+  /^\d+\.\s*TASK:/m,
+  /EXPECTED OUTCOME:/,
+  /MUST NOT DO:/,
+  /REQUIRED TOOLS:/,
+  /brain\/omo-memory (?:capture|recall|bootstrap)/,
+  /\[BACKGROUND TASK COMPLETED\]/,
+  /background_output\(task_id=/,
+  /^Instructions from:/m,
+  /^\[Agent Usage Reminder\]/m,
+]
 
 /** Patterns that indicate AI meta-talk / assistant boilerplate. */
 const AI_META_PATTERNS: RegExp[] = [
@@ -40,9 +62,10 @@ const ASSISTANT_LIST_PATTERNS: RegExp[] = [
   /(?:^[-*]\s.+$\n?){3,}/m,     // bullet list with 3+ items across lines
 ]
 
-/** Question-only patterns (but NOT "remember" questions — those are handled by Layer 0). */
+/** Question-only patterns — includes contractions (don't, isn't, etc.). */
 const QUESTION_ONLY_PATTERNS: RegExp[] = [
   /^(?:how|what|where|when|why|which|who|is|are|can|could|would|should|do|does|did) .+\?$/i,
+  /^(?:don'?t|doesn'?t|didn'?t|won'?t|wouldn'?t|shouldn'?t|isn'?t|aren'?t|haven'?t|hasn'?t|weren'?t|wasn'?t) .+\?$/i,
 ]
 
 export interface NegativeMatchResult {
@@ -60,6 +83,16 @@ export function matchesNegativePattern(
 ): NegativeMatchResult {
   const trimmed = text.trim()
   if (!trimmed) return { rejected: true, pattern: "empty" }
+
+  // Length guard — messages over 1500 chars are dumps, not human conversation
+  if (trimmed.length > MAX_EXTRACTABLE_LENGTH) {
+    return { rejected: true, pattern: "too_long" }
+  }
+
+  // System injection — bootstrap, notifications, delegation prompts
+  for (const pat of SYSTEM_INJECTION_PATTERNS) {
+    if (pat.test(trimmed)) return { rejected: true, pattern: "system_injection" }
+  }
 
   for (const pat of AI_META_PATTERNS) {
     if (pat.test(trimmed)) return { rejected: true, pattern: "ai_meta_talk" }
