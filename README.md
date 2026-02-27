@@ -4,16 +4,21 @@ Standalone auto-extraction pipeline for implicit memory capture from AI conversa
 
 ## Installation
 
-```bash
-bun add @nous-labs/auto-extract
-```
-
-Or with npm:
+Clone the repository:
 
 ```bash
-npm install @nous-labs/auto-extract
+git clone https://github.com/nous-labs/nous-auto-extract.git
 ```
 
+Add as a local dependency in your project's `package.json`:
+
+```json
+{
+  "dependencies": {
+    "@nous-labs/auto-extract": "file:../nous-auto-extract"
+  }
+}
+```
 ## Usage
 
 ```typescript
@@ -40,7 +45,7 @@ for (const candidate of candidates) {
 Batch extraction from an array of conversation messages.
 
 - **messages**: `ConversationMessage[]` — Array of messages with `role` and `content`
-- **config**: `Partial<ExtractionConfig>` — Optional configuration overrides
+- **config**: `ExtractorConfig` — Optional configuration overrides
 - **Returns**: `ExtractionCandidate[]` — Array of extraction candidates meeting confidence thresholds
 
 ### `classifyMessage(message, config?)`
@@ -48,15 +53,15 @@ Batch extraction from an array of conversation messages.
 Classify a single message through the full pipeline.
 
 - **message**: `ConversationMessage` — Single message to classify
-- **config**: `Partial<ExtractionConfig>` — Optional configuration overrides
-- **Returns**: `ClassificationResult | null` — Classification result or null if rejected
+- **config**: `ExtractorConfig` — Optional configuration overrides
+- **Returns**: `ClassificationResult` — Classification result (check `.accepted` field)
 
 ### `buildCaptureMetadata(candidate, config?)`
 
 Build JSON metadata string from an extraction candidate.
 
 - **candidate**: `ExtractionCandidate` — The extraction candidate
-- **config**: `Partial<ExtractionConfig>` — Optional configuration overrides
+- **config**: `ExtractorConfig` — Optional configuration overrides
 - **Returns**: `string` — JSON string with capture metadata
 
 ### `scoreText(text)`
@@ -64,7 +69,7 @@ Build JSON metadata string from an extraction candidate.
 Raw keyword scoring without pipeline filters.
 
 - **text**: `string` — Text to score
-- **Returns**: `Map<MemoryType, number>` — Scores per memory type
+- **Returns**: `CategoryScore | null` — Highest scoring category, or null if no primary keywords match
 
 ### `matchesNegativePattern(text, role)`
 
@@ -72,7 +77,7 @@ Check if text matches negative rejection patterns.
 
 - **text**: `string` — Text to check
 - **role**: `MessageRole` — Role of the message sender
-- **Returns**: `boolean` — True if matches a negative pattern
+- **Returns**: `{ rejected: boolean; pattern?: string }` — Whether rejected and which pattern matched
 
 ### `isRoleAllowed(type, role)`
 
@@ -85,10 +90,10 @@ Check if a memory type is allowed for a given role.
 ## Configuration
 
 ```typescript
-interface ExtractionConfig {
-  confidenceThreshold: number;    // Default: 0.5
-  assistantThreshold: number;     // Default: 0.6
-  extractorVersion: string;       // Default: "1.0.0"
+interface ExtractorConfig {
+  confidenceThreshold?: number;   // Default: 0.5
+  assistantThreshold?: number;    // Default: 0.6
+  extractorVersion?: string;      // Default: "1.0"
 }
 ```
 
@@ -99,31 +104,45 @@ interface ExtractionConfig {
 ## Types
 
 ```typescript
-type MessageRole = 'user' | 'assistant' | 'system';
+type MessageRole = 'user' | 'assistant';
 type MemoryType = 'decision' | 'preference' | 'constraint' | 'failure' | 'learning';
 
 interface ConversationMessage {
+  id: string;
   role: MessageRole;
   content: string;
+  sessionId: string;
 }
 
 interface ClassificationResult {
-  type: MemoryType;
-  confidence: number;
-  scores: CategoryScore[];
-  bypassed: boolean;
-  role: MessageRole;
+  accepted: boolean;
+  type?: MemoryType;
+  confidence?: number;
+  content?: string;
+  rejectionReason?: RejectionReason;
+  explicitIntent?: boolean;
+  primaryMatches?: string[];
+  boosterMatches?: string[];
 }
 
-interface ExtractionCandidate extends ClassificationResult {
+type RejectionReason = 'negative_pattern' | 'below_threshold' | 'role_forbidden' | 'empty_content';
+
+interface ExtractionCandidate {
+  type: MemoryType;
   content: string;
+  confidence: number;
+  sourceMessageId: string;
+  sourceSessionId: string;
+  sourceRole: MessageRole;
+  explicitIntent: boolean;
 }
 
 interface CategoryScore {
   type: MemoryType;
   score: number;
+  primaryMatches: string[];
+  boosterMatches: string[];
 }
-```
 
 ## Architecture
 
