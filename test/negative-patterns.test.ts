@@ -170,4 +170,73 @@ describe("negative-patterns", () => {
       })
     })
   })
+
+  describe("#given mode prefix patterns", () => {
+    describe("#when text starts with keyword-detector mode prefix", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("[analyze-mode]\nANALYSIS MODE. Gather context before diving deep:", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("[search-mode]\nMAXIMIZE SEARCH EFFORT.", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("[ultrawork-mode]\nWork autonomously.", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("[prove-yourself-mode]\nProve your solution.", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text starts with mode instruction body", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("ANALYSIS MODE. Gather context before diving deep:", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("MAXIMIZE SEARCH EFFORT. Launch multiple background agents.", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text contains mode-like words but is not a prefix", () => {
+      it("#then should NOT reject", () => {
+        expect(matchesNegativePattern("I prefer analyze mode for complex tasks", "user").rejected).toBe(false)
+        expect(matchesNegativePattern("Always use search mode when exploring", "user").rejected).toBe(false)
+      })
+    })
+  })
+
+  describe("#given request intent patterns", () => {
+    describe("#when user requests an action", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("i want to see some gc stats", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I want you to give me context stats", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I want to check the upstream commits", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I need to see the build output", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I want to be able to run tests", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("show me the error logs", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("give me a summary", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I want some context about this", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("I want as much as possible outside the fork", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when user states a real preference with 'want'", () => {
+      it("#then should NOT reject", () => {
+        expect(matchesNegativePattern("I want tabs over spaces", "user").rejected).toBe(false)
+        expect(matchesNegativePattern("I want dark mode by default", "user").rejected).toBe(false)
+        expect(matchesNegativePattern("I always want TypeScript for new projects", "user").rejected).toBe(false)
+      })
+    })
+  })
+
+  describe("#given frustration/feedback patterns", () => {
+    describe("#when user expresses frustration at assistant", () => {
+      it("#then should reject", () => {
+        expect(matchesNegativePattern("you always forget this", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("you never listen to what I say", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("you are running circles not understanding", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("you keep making the same mistake", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("you don't understand what we want", "user").rejected).toBe(true)
+        expect(matchesNegativePattern("you look at wrong transcript", "user").rejected).toBe(true)
+      })
+    })
+
+    describe("#when text contains 'you' but is a real preference", () => {
+      it("#then should NOT reject", () => {
+        expect(matchesNegativePattern("I prefer you use TypeScript for all new code", "user").rejected).toBe(false)
+        expect(matchesNegativePattern("When you commit, always run tests first", "user").rejected).toBe(false)
+      })
+    })
+  })
 })

@@ -28,6 +28,26 @@ const SYSTEM_INJECTION_PATTERNS: RegExp[] = [
   /^\[Agent Usage Reminder\]/m,
 ]
 
+/** Mode prefix injections from keyword-detector hook. */
+const MODE_PREFIX_PATTERNS: RegExp[] = [
+  /^\[(?:analyze|search|ultrawork|prove-yourself)-mode\]/i,
+  /^ANALYSIS MODE\./i,
+  /^MAXIMIZE SEARCH EFFORT\./i,
+]
+
+/** Request intent — user asking assistant to perform an action, not stating preference. */
+const REQUEST_INTENT_PATTERNS: RegExp[] = [
+  /^i (?:want|need) (?:to see|to know|to check|you to|to look|to understand|to get|to be able)\b/i,
+  /^i (?:want|need) (?:as much|some|more|the|a )\b/i,
+  /^(?:show me|give me|tell me|let me see|let's see)\b/i,
+]
+
+/** Frustration or feedback directed at assistant — not real preferences/constraints. */
+const FRUSTRATION_PATTERNS: RegExp[] = [
+  /^you (?:always|never|keep|are |don'?t|have |were |should|look |forgot|miss)/i,
+  /^(?:you are running|you look at wrong|that was the simple)/i,
+]
+
 /** Patterns that indicate AI meta-talk / assistant boilerplate. */
 const AI_META_PATTERNS: RegExp[] = [
   /^let me (?:analyze|examine|look at|review|check|investigate|explore)/i,
@@ -92,6 +112,21 @@ export function matchesNegativePattern(
   // System injection — bootstrap, notifications, delegation prompts
   for (const pat of SYSTEM_INJECTION_PATTERNS) {
     if (pat.test(trimmed)) return { rejected: true, pattern: "system_injection" }
+  }
+
+  // Mode prefix injections (keyword-detector hook)
+  for (const pat of MODE_PREFIX_PATTERNS) {
+    if (pat.test(trimmed)) return { rejected: true, pattern: "mode_prefix" }
+  }
+
+  // Request intent — asking for action, not stating preference
+  for (const pat of REQUEST_INTENT_PATTERNS) {
+    if (pat.test(trimmed)) return { rejected: true, pattern: "request_intent" }
+  }
+
+  // Frustration/feedback directed at assistant
+  for (const pat of FRUSTRATION_PATTERNS) {
+    if (pat.test(trimmed)) return { rejected: true, pattern: "frustration" }
   }
 
   for (const pat of AI_META_PATTERNS) {
