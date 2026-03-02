@@ -20,7 +20,7 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     type: "preference",
-    primary: ["prefer", "like", "want", "rather", "always use", "my preference", "i usually"],
+    primary: ["prefer", "i like", "want", "rather", "always use", "my preference", "i usually"],
     boosters: ["instead", "over", "better", "rather than", "compared to"],
   },
   {

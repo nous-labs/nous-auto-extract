@@ -110,9 +110,40 @@ describe("signal-patterns", () => {
   describe("#given score capping", () => {
     describe("#when many keywords match", () => {
       it("#then should cap at 1.0", () => {
-        const result = scoreText("I always prefer and want and like X over Y instead of Z, better than W")
+        const result = scoreText("I always prefer and want and i like X over Y instead of Z, better than W")
         expect(result).not.toBeNull()
         expect(result!.score).toBeLessThanOrEqual(1.0)
+      })
+    })
+  })
+
+  describe("#given refined 'like' keyword", () => {
+    describe("#when text contains 'i like' as preference", () => {
+      it("#then should match preference", () => {
+        const result = scoreText("I like TypeScript for backend work")
+        expect(result).not.toBeNull()
+        expect(result!.type).toBe("preference")
+        expect(result!.primaryMatches).toContain("i like")
+      })
+    })
+
+    describe("#when text contains 'like' in non-preference context", () => {
+      it("#then should NOT match preference for 'like'", () => {
+        const result = scoreText("burning like hell")
+        // Should not match preference — no 'i like' present
+        expect(result).toBeNull()
+      })
+
+      it("#then should NOT match for 'looks like'", () => {
+        const result = scoreText("looks like it works fine")
+        expect(result).toBeNull()
+      })
+
+      it("#then should NOT match for 'feels like'", () => {
+        const result = scoreText("feels like the wrong approach")
+        // 'wrong' matches failure, but 'like' alone won't match preference
+        expect(result).not.toBeNull()
+        expect(result!.type).toBe("failure")
       })
     })
   })
